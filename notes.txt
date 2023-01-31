@@ -1,0 +1,19 @@
+
+Abbreviated build nodes for fftw_mpi_example.cpp on Perlmutter:
+
+module load cpu
+module load cmake
+module load PrgEnv-gnu
+module load cray-fftw
+
+export CC=`which cc`
+export CXX=`which CC`
+
+mkdir build
+cd build
+cmake ../
+make
+
+You should now have a clean build of the fftw_mpi_example
+
+The "magic"
