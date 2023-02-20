@@ -3,11 +3,15 @@ PYTHON DENOISER SCRIPT
 
 "Denoises" the FFT input, also performs some rudementary visualization.
 
-$ python ./denoiser.py r_limit
+$ python denoiser.py x y r_limit file_name
+    x = N0
+    y = N1
     r_limit = threshold of noise filtering in terms of % of max distance from 
               center to a point in computational domain (0-1)
+    file_name = file to be displayed and denoised
+              
+! Currently this code takes hardcoded input / cmd args, will be replaced with SENSEI Endpoint
 
-! Currently this code takes hardcoded input, will be replaced with SENSEI Endpoint
 # Contributions:
 Sudhanshu Kulkarni, E. Wes Bethel
 2022
@@ -20,94 +24,20 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
+# default values
 r_limit = 0.1
 N0 = 12
 N1 = 12
 
-''' TESTING PURE DATA '''
-
-file_name = "data/pure_12x12_10-50n_5r.dat"
-
-if len(sys.argv)>1:
-    N0 = sys.argv[1]
-    N1 = sys.argv[2]
-    r_limit = sys.argv[3]
-    file_name = sys.argv[4]
-
-
-# reading from file, replace with SENSEI endpoints:
-input_data = []
-f = open(file_name, "rb")
-
-# parse 'double' data written by C++ into an array
-i = 0
-while True:
-    double = f.read(8)  
-    i += 1
-    if not double:
-        break
-    input_data.append(struct.unpack("d", double)[0])
-
-f.close()
-
-input_data = np.asarray(input_data).reshape(N0, N1)
-# print(input_data, input_data.size, input_data.shape)
-
-# display the content
-plt.figure()
-plt.imshow(input_data, cmap='OrRd', origin='lower', alpha=1, aspect='auto')
-plt.colorbar()
-plt.title("PURE")
-plt.savefig(f"{file_name[:-3]}png")
-
-
-''' TESTING NOISY DATA '''
-
-file_name = "data/noisy_12x12_10-50n_5r.dat"
-
-if len(sys.argv)>1:
-    N0 = sys.argv[1]
-    N1 = sys.argv[2]
-    r_limit = sys.argv[3]
-    file_name = sys.argv[4]
-
-
-# reading from file, replace with SENSEI endpoints:
-input_data = []
-f = open(file_name, "rb")
-
-# parse 'double' data written by C++ into an array
-i = 0
-while True:
-    double = f.read(8)  
-    i += 1
-    if not double:
-        break
-    input_data.append(struct.unpack("d", double)[0])
-
-f.close()
-
-input_data = np.asarray(input_data).reshape(N0, N1)
-# print(input_data, input_data.size, input_data.shape)
-
-# display the content
-plt.figure()
-plt.imshow(input_data, cmap='OrRd', origin='lower', alpha=1, aspect='auto')
-plt.colorbar()
-plt.title("NOISY")
-plt.savefig(f"{file_name[:-3]}png")
-
-
 file_name = "data/fft_12x12_0-3r.dat"
 
 if len(sys.argv)>1:
-    N0 = sys.argv[1]
-    N1 = sys.argv[2]
+    N0 = int(sys.argv[1])
+    N1 = int(sys.argv[2])
     r_limit = sys.argv[3]
     file_name = sys.argv[4]
 
-
-# reading from file, replace with SENSEI endpoints:
+# reading from file, replace with SENSEI endpoints
 input_data = []
 f = open(file_name, "rb")
 
@@ -129,7 +59,7 @@ input_data = np.asarray(input_data).reshape(N0, N1)
 plt.figure()
 plt.imshow(input_data, cmap='OrRd', origin='lower', alpha=1, aspect='auto')
 plt.colorbar()
-plt.title("FFT NOISY")
+plt.title("FFT")
 plt.savefig(f"{file_name[:-3]}png")
 
 # denoising
@@ -150,4 +80,67 @@ plt.colorbar()
 plt.title("FFT DENOISED")
 plt.savefig(f"{file_name[:-4]}_denoised.png")
 
+f = open(f"{file_name[:-4]}_denoised.dat", "wb")
 
+input_data = input_data.flatten()
+input_data.tofile(f"{file_name[:-4]}_denoised.dat")
+
+
+''' TESTING PURE DATA '''
+
+# file_name = "data/pure_12x12_10-50n_5r.dat"
+
+# # reading from file, replace with SENSEI endpoints:
+# input_data = []
+# f = open(file_name, "rb")
+
+# # parse 'double' data written by C++ into an array
+# i = 0
+# while True:
+#     double = f.read(8)  
+#     i += 1
+#     if not double:
+#         break
+#     input_data.append(struct.unpack("d", double)[0])
+
+# f.close()
+
+# input_data = np.asarray(input_data).reshape(N0, N1)
+# # print(input_data, input_data.size, input_data.shape)
+
+# # display the content
+# plt.figure()
+# plt.imshow(input_data, cmap='OrRd', origin='lower', alpha=1, aspect='auto')
+# plt.colorbar()
+# plt.title("PURE")
+# plt.savefig(f"{file_name[:-3]}png")
+
+
+''' TESTING NOISY DATA '''
+
+# file_name = "data/noisy_12x12_10-50n_5r.dat"
+
+# # reading from file, replace with SENSEI endpoints:
+# input_data = []
+# f = open(file_name, "rb")
+
+# # parse 'double' data written by C++ into an array
+# i = 0
+# while True:
+#     double = f.read(8)  
+#     i += 1
+#     if not double:
+#         break
+#     input_data.append(struct.unpack("d", double)[0])
+
+# f.close()
+
+# input_data = np.asarray(input_data).reshape(N0, N1)
+# # print(input_data, input_data.size, input_data.shape)
+
+# # display the content
+# plt.figure()
+# plt.imshow(input_data, cmap='OrRd', origin='lower', alpha=1, aspect='auto')
+# plt.colorbar()
+# plt.title("NOISY")
+# plt.savefig(f"{file_name[:-3]}png")
