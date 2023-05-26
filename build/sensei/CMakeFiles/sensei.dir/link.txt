@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../lib64/libsensei.a CMakeFiles/sensei.dir/ConfigurableAnalysis.cxx.o
+/usr/bin/ranlib ../lib64/libsensei.a

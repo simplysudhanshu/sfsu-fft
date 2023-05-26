@@ -1,0 +1,223 @@
+strict digraph modules {
+clusterrank=local;
+rankdir=TB;
+subgraph "modules_without_kits" {
+"SVTK::utf8" [
+    label="SVTK::utf8"
+    shape=cds
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=1
+];
+
+"SVTK::svtksys" [
+    label="SVTK::svtksys"
+    shape=cds
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=1
+];
+
+"SVTK::kwiml" [
+    label="SVTK::kwiml"
+    shape=cds
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=1
+];
+
+}
+subgraph "cluster_SVTK::Common" {
+label="SVTK::Common"
+"SVTK::CommonDataModel" [
+    label="SVTK::CommonDataModel"
+    shape=rectangle
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=5
+];
+"SVTK::CommonDataModel" -> "SVTK::CommonCore" [style=solid, arrowhead=normal];
+"SVTK::CommonDataModel" -> "SVTK::CommonMath" [style=solid, arrowhead=normal];
+"SVTK::CommonDataModel" -> "SVTK::CommonTransforms" [style=solid, arrowhead=normal];
+
+"SVTK::CommonSystem" [
+    label="SVTK::CommonSystem"
+    shape=rectangle
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=5
+];
+"SVTK::CommonSystem" -> "SVTK::CommonCore" [style=solid, arrowhead=normal];
+
+"SVTK::CommonMisc" [
+    label="SVTK::CommonMisc"
+    shape=rectangle
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=5
+];
+"SVTK::CommonMisc" -> "SVTK::CommonCore" [style=solid, arrowhead=normal];
+"SVTK::CommonMisc" -> "SVTK::CommonMath" [style=solid, arrowhead=normal];
+
+"SVTK::CommonTransforms" [
+    label="SVTK::CommonTransforms"
+    shape=rectangle
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=5
+];
+"SVTK::CommonTransforms" -> "SVTK::CommonCore" [style=solid, arrowhead=normal];
+"SVTK::CommonTransforms" -> "SVTK::CommonMath" [style=solid, arrowhead=normal];
+
+"SVTK::CommonMath" [
+    label="SVTK::CommonMath"
+    shape=rectangle
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=5
+];
+"SVTK::CommonMath" -> "SVTK::CommonCore" [style=solid, arrowhead=normal];
+
+"SVTK::CommonCore" [
+    label="SVTK::CommonCore"
+    shape=rectangle
+    style=filled
+    color="/svg/coral"
+    fillcolor="/svg/white"
+    penwidth=5
+];
+"SVTK::CommonCore" -> "SVTK::kwiml" [style=solid, arrowhead=normal];
+"SVTK::CommonCore" -> "SVTK::svtksys" [style=solid, arrowhead=normal];
+
+}
+
+subgraph cluster_key {
+  label=Key;
+  subgraph cluster_party {
+    first_party [
+      label="First party"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    third_party [
+      label="Third party"
+      shape=cds
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+  }
+  subgraph cluster_whence {
+    internal [
+      label="Internal module"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    external [
+      label="External module"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/cyan"
+      penwidth=5
+    ];
+  }
+  subgraph cluster_wrapping {
+    include_wrap [
+      label="Wrappable"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    exclude_wrap [
+      label="Not wrappable"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=1
+    ];
+  }
+  subgraph cluster_implementable {
+    implementable [
+      label="Implementable"
+      shape=rectangle
+      style=filled
+      color="/svg/darkorchid"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    not_implementable [
+      label="Not implementable"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+  }
+  subgraph cluster_dependencies {
+    dependent [
+      label="Dependent"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    private_dependee [
+      label="Private Dependee"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    optional_dependee [
+      label="Optional Dependee"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    public_dependee [
+      label="Public Dependee"
+      shape=rectangle
+      style=filled
+      color="/svg/coral"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    implemented [
+      label="Implemented"
+      shape=rectangle
+      style=filled
+      color="/svg/darkorchid"
+      fillcolor="/svg/white"
+      penwidth=5
+    ];
+    dependent -> private_dependee [style=dotted, arrowhead=normal];
+    dependent -> optional_dependee [style=dotted, arrowhead=empty];
+    dependent -> public_dependee [style=solid, arrowhead=normal];
+    dependent -> implemented [style=bold, arrowhead=normal];
+  }
+}
+}

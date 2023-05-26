@@ -20,6 +20,7 @@
 
 #include "Autocorrelation.h"
 #include "Histogram.h"
+#include "Fft.h"
 #ifdef ENABLE_VTK_IO
 #include "VTKPosthocIO.h"
 #ifdef ENABLE_VTK_MPI
@@ -97,6 +98,7 @@ struct ConfigurableAnalysis::InternalsType
   // a status message indicating success/failure is printed
   // by rank 0
   int AddHistogram(pugi::xml_node node);
+  int AddFft(pugi::xml_node node);
   int AddVTKmContour(pugi::xml_node node);
   int AddVTKmVolumeReduction(pugi::xml_node node);
   int AddVTKmCDF(pugi::xml_node node);
@@ -209,6 +211,44 @@ int ConfigurableAnalysis::InternalsType::AddHistogram(pugi::xml_node node)
 
   return 0;
 }
+
+// --------------------------------------------------------------------------
+int ConfigurableAnalysis::InternalsType::AddFft(pugi::xml_node node)
+{
+  if (XMLUtils::RequireAttribute(node, "mesh") || XMLUtils::RequireAttribute(node, "array"))
+    {
+    SENSEI_ERROR("Failed to initialize Fft");
+    return -1;
+    }
+
+//   int association = 0;
+//   std::string assocStr = node.attribute("association").as_string("point");
+//   if (SVTKUtils::GetAssociation(assocStr, association))
+//     {
+//     SENSEI_ERROR("Failed to initialize Fft");
+//     return -1;
+//     }
+
+//   std::string mesh = node.attribute("mesh").value();
+//   std::string array = node.attribute("array").value();
+//   int bins = node.attribute("bins").as_int(10);
+//   std::string fileName = node.attribute("file").value();
+
+  auto fft = svtkSmartPointer<Fft>::New();
+
+//   if (this->Comm != MPI_COMM_NULL)
+//     fft->SetCommunicator(this->Comm);
+
+//   this->TimeInitialization(fft, [&]() {
+//       fft->Initialize(bins, mesh, association, array, fileName);
+//       return 0;
+//     });
+  this->Analyses.push_back(fft.GetPointer());
+
+  SENSEI_STATUS("Configured Fft.")
+
+  return 0;
+} 
 
 // --------------------------------------------------------------------------
 int ConfigurableAnalysis::InternalsType::AddVTKmContour(pugi::xml_node node)
@@ -1482,6 +1522,7 @@ int ConfigurableAnalysis::Initialize(const pugi::xml_node &root)
 
     std::string type = node.attribute("type").value();
     if (!(((type == "histogram") && !this->Internals->AddHistogram(node))
+      || ((type == "fft") && !this->Internals->AddFft(node))
       || ((type == "autocorrelation") && !this->Internals->AddAutoCorrelation(node))
       || ((type == "adios1") && !this->Internals->AddAdios1(node))
       || ((type == "adios2") && !this->Internals->AddAdios2(node))

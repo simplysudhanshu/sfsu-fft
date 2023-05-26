@@ -1,0 +1,5 @@
+set(_svtk_module_import_prefix "${CMAKE_CURRENT_LIST_DIR}")
+get_filename_component(_svtk_module_import_prefix "${_svtk_module_import_prefix}" DIRECTORY)
+get_filename_component(_svtk_module_import_prefix "${_svtk_module_import_prefix}" DIRECTORY)
+get_filename_component(_svtk_module_import_prefix "${_svtk_module_import_prefix}" DIRECTORY)
+get_filename_component(_svtk_module_import_prefix "${_svtk_module_import_prefix}" DIRECTORY)

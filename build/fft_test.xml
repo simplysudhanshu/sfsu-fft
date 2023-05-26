@@ -1,0 +1,3 @@
+<sensei>
+  <analysis type="fft" mesh="simulation_data" array="array" />
+</sensei>
