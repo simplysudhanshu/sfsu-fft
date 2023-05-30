@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib64/libsvtkCommonMisc-9.0.a CMakeFiles/CommonMisc.dir/svtkContourValues.cxx.o CMakeFiles/CommonMisc.dir/svtkErrorCode.cxx.o CMakeFiles/CommonMisc.dir/svtkFunctionParser.cxx.o CMakeFiles/CommonMisc.dir/svtkHeap.cxx.o CMakeFiles/CommonMisc.dir/svtkPolygonBuilder.cxx.o CMakeFiles/CommonMisc.dir/svtkResourceFileLocator.cxx.o
-/usr/bin/ranlib ../../lib64/libsvtkCommonMisc-9.0.a

@@ -29,7 +29,7 @@ Sudhanshu Kulkarni, E. Wes Bethel
 #include <string>
 #include <set>
 
-#include <fftw3-mpi.h>
+// #include <where-mpi.h>
 #include <svtkDoubleArray.h>
 #include <svtkImageData.h>
 #include <svtkImageData.h>
@@ -90,14 +90,12 @@ noisy(double x, int w)
 
 /* Execute SENSEI */
 void
-send_with_sensei(vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, string const& arrayName)
+send_with_sensei(vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, string const& xmlFileName)
 {
-    // auto aa = sensei::ConfigurableAnalysis::New();
-    // aa->Initialize("../fft-config.xml");             // TODO !
+    printf("\n-> Data_Generator::Initializing with XML: (%s)\n", xmlFileName.c_str());
 
     sensei::ConfigurableAnalysis *fft_endpoint = sensei::ConfigurableAnalysis::New();
-    fft_endpoint->Initialize("../fft_test.xml");
-    printf("\n-> Data_Generator::SENSEI initialization complete");
+    fft_endpoint->Initialize(xmlFileName);
 
     svtkDoubleArray *da = svtkDoubleArray::New();
     da->SetNumberOfTuples(data.size());
@@ -108,28 +106,28 @@ send_with_sensei(vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, string co
         *da->GetPointer(i) = data.at(i);
     printf("\n-> Data_Generator::Setting up data in svtkDataArray");
 
-    svtkDoubleArray *ddim = svtkDoubleArray::New();
-    ddim->SetNumberOfTuples(3);
-    ddim->SetName("dim");
+    // svtkDoubleArray *ddim = svtkDoubleArray::New();
+    // ddim->SetNumberOfTuples(3);
+    // ddim->SetName("dim");
 
-    *ddim->GetPointer(0) = (double)yDim;
-    *ddim->GetPointer(1) = (double)xDim;
-    *ddim->GetPointer(2) = 0.0;
+    // *ddim->GetPointer(0) = (double)yDim;
+    // *ddim->GetPointer(1) = (double)xDim;
+    // *ddim->GetPointer(2) = 0.0;
 
-    printf("\n-> Data_Generator::Created svtkDataArray for dimensions\n");
 
     svtkImageData *im = svtkImageData::New();
-    im->SetDimensions(xDim, yDim, 0);
+    im->SetDimensions(xDim, yDim, 1);
     im->GetPointData()->AddArray(da);
-    im->GetPointData()->AddArray(ddim);
+    // im->GetPointData()->AddArray(ddim);
     da->Delete();
-    ddim->Delete();
+    // ddim->Delete();
 
     printf("\n-> Data_Generator::Setting up data in svtkImageData");
 
     // sensei::SVTKDataAdaptor *dataAdaptor = sensei::SVTKDataAdaptor::New();
     sensei::SVTKDataAdaptor *dataAdaptor = sensei::SVTKDataAdaptor::New();
-    dataAdaptor->AddArray(im, arrayName, 0, "random string");
+    dataAdaptor->SetDataObject("simulation_data", im); 
+
    //  dataAdaptor->setDims(xDim, yDim);
    //  dataAdaptor->setDirection(0);
 
@@ -364,7 +362,7 @@ main(int argc, char *argv[])
         printf("\n ____ TIMING RESULTS ____");
         printf("\nElapsed Computation Time: %6.4f (ms)\n", elapsed_computation_time*1000.0);
 
-        string str = "simulation_data";
+        string str = "../fft_test.xml";
         send_with_sensei(all_pure_data, N0, N1, str);
 
         // /* Writing output in data folder */
@@ -412,4 +410,3 @@ main(int argc, char *argv[])
     return 0;
 
 }
-

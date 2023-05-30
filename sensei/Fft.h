@@ -1,5 +1,5 @@
-#ifndef fft_h
-#define fft_h
+#ifndef Fft_h
+#define Fft_h
 
 #include <AnalysisAdaptor.h>
 
@@ -17,7 +17,7 @@ public:
 
   senseiTypeMacro(Fft, AnalysisAdaptor);
 
-  void Initialize();
+  void Initialize(std::string const& direction);
 
   /// compute the Fft for this time step
   bool Execute(DataAdaptor* data, DataAdaptor**) override;
@@ -26,7 +26,7 @@ public:
   int Finalize() override;
 
 
-  MPI_Comm GetCommunicator() { return this->Comm; }
+  // MPI_Comm GetCommunicator() { return this->Comm; }
 
 protected:
   Fft();

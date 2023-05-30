@@ -215,26 +215,26 @@ int ConfigurableAnalysis::InternalsType::AddHistogram(pugi::xml_node node)
 // --------------------------------------------------------------------------
 int ConfigurableAnalysis::InternalsType::AddFft(pugi::xml_node node)
 {
-  if (XMLUtils::RequireAttribute(node, "mesh") || XMLUtils::RequireAttribute(node, "array"))
+  if (XMLUtils::RequireAttribute(node, "mesh") || XMLUtils::RequireAttribute(node, "direction"))
     {
     SENSEI_ERROR("Failed to initialize Fft");
     return -1;
     }
 
-//   int association = 0;
-//   std::string assocStr = node.attribute("association").as_string("point");
-//   if (SVTKUtils::GetAssociation(assocStr, association))
-//     {
-//     SENSEI_ERROR("Failed to initialize Fft");
-//     return -1;
-//     }
-
-//   std::string mesh = node.attribute("mesh").value();
-//   std::string array = node.attribute("array").value();
+  std::string mesh = node.attribute("mesh").value();
+  std::string direction = node.attribute("direction").value();
+  
+  if (direction != "FFTW_FORWARD" && direction != "FFTW_BACKWARD")
+  {
+    SENSEI_ERROR("Invalid direction specified in XML (" + direction + "). Acceptable options are 'FFTW_FORWARD' or 'FFTW_BACKWARD'.")
+    return -1;
+  }
 //   int bins = node.attribute("bins").as_int(10);
 //   std::string fileName = node.attribute("file").value();
 
   auto fft = svtkSmartPointer<Fft>::New();
+
+  fft->Initialize(direction);
 
 //   if (this->Comm != MPI_COMM_NULL)
 //     fft->SetCommunicator(this->Comm);
@@ -1521,6 +1521,7 @@ int ConfigurableAnalysis::Initialize(const pugi::xml_node &root)
       }
 
     std::string type = node.attribute("type").value();
+
     if (!(((type == "histogram") && !this->Internals->AddHistogram(node))
       || ((type == "fft") && !this->Internals->AddFft(node))
       || ((type == "autocorrelation") && !this->Internals->AddAutoCorrelation(node))

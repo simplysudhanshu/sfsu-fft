@@ -17,7 +17,6 @@
 #include <fftw3-mpi.h>
 #include <svtkDoubleArray.h>
 #include <svtkImageData.h>
-#include <svtkImageData.h>
 #include <svtkPointData.h>
 #include <svtkFieldData.h>
 
@@ -59,7 +58,7 @@
 
 /* Perform FFTW */
 std::vector<double>
-fftw(ptrdiff_t N0, ptrdiff_t N1, int direction, std::vector<double> input_data)
+fftw(ptrdiff_t N0, ptrdiff_t N1, std::string direction, std::vector<double> input_data)
 {
     /* FFTW MPI Stuff */
     ptrdiff_t alloc_local, local_n0, local_n0_start, y, x;
@@ -74,15 +73,10 @@ fftw(ptrdiff_t N0, ptrdiff_t N1, int direction, std::vector<double> input_data)
     data = fftw_alloc_complex(alloc_local);
 
     /* create plan for in-place DFT */
-    if (direction == 0)
+    if (direction == "FFTW_FORWARD")
         plan = fftw_mpi_plan_dft_2d(N0, N1, data, data, MPI_COMM_WORLD, FFTW_FORWARD, FFTW_ESTIMATE);  
-    else if (direction == 1)
-        plan = fftw_mpi_plan_dft_2d(N0, N1, data, data, MPI_COMM_WORLD, FFTW_BACKWARD, FFTW_ESTIMATE);  
     else
-        {
-            printf("\n!\tInvalid direction specified: (0:forward, 1:inverse) => you entered %d", direction);
-            exit(0);
-        }
+        plan = fftw_mpi_plan_dft_2d(N0, N1, data, data, MPI_COMM_WORLD, FFTW_BACKWARD, FFTW_ESTIMATE);  
 
     /* Read the input data and store the appropriate portion of it, in rank's data container */
     // std::vector <double> input_data = readStuff(N0*N1, input_file_name);
@@ -127,7 +121,7 @@ fftw(ptrdiff_t N0, ptrdiff_t N1, int direction, std::vector<double> input_data)
     sbuf.emplace_back(local_n0);
     
     // Adding FFT output data to source buffer
-    if (direction == 0){
+    if (direction == "FFTW_FORWARD"){
         for(x = 0; x < local_n0*N1; ++x)
             sbuf.emplace_back(data[x][0]);
     }
@@ -144,11 +138,11 @@ namespace sensei
 {
 struct Fft::InternalsType
 {
-  InternalsType() : N0(0), N1(0), direction(0) {}
+  InternalsType() : N0(0), N1(0), direction("FFTW_FORWARD") {}
   ~InternalsType() {}
 
   ptrdiff_t N0, N1;
-  int direction;
+  std::string direction;
   std::vector <double> data;
 };
 
@@ -164,6 +158,11 @@ Fft::~Fft()
 {
   MPI_Comm_free(&this->Comm);
   delete this->Internals;
+}
+
+//----------------------------------------------------------------------------
+void Fft::Initialize(std::string const& direction){
+    this->Internals->direction = direction;
 }
 
 //----------------------------------------------------------------------------
@@ -191,19 +190,27 @@ bool Fft::Execute(sensei::DataAdaptor* dataIn, sensei::DataAdaptor** dataOut)
     
     // get the mesh object
     svtkDataObject *dobj = nullptr;
+
     if (dataIn->GetMesh("simulation_data", true, dobj))
         {
-        SENSEI_ERROR("Failed to get mesh \t simulation_data" << "\"")
+        SENSEI_ERROR("Failed to get mesh: \t simulation_data" << "\"")
         return false;
     }
+    auto im = dynamic_cast<svtkImageData*>(dobj);
 
-    dobj = dynamic_cast<svtkImageData*>(dobj);
+    // svtkDataArray *ddim = dobj->GetAttributesAsFieldData(0)->GetArray("dim");
+    int dimensions;
+    cout << "\n-> In FFTW Endpoint\n";
+    // cout << dimensions[0] << dimensions[1] << dimensions[2];
+    cout << "\n-> In FFTW Endpoint\n";
 
-    svtkDataArray *ddim = dobj->GetAttributesAsFieldData(0)->GetArray("dim");
-    this->Internals->N0 = *ddim->GetTuple(0);
-    this->Internals->N1 = *ddim->GetTuple(1);
-    this->Internals->direction = *ddim->GetTuple(2);
+    dimensions = im->GetDataDimension();
+    cout << "\n->> In FFTW Endpoint\n" ;
 
+    this->Internals->N0 = (long int)(dimensions);
+    this->Internals->N1 = (long int)(dimensions);
+    // this->Internals->direction = im->GetDimensions()[2];
+    printf(":: FFT :: dimensions: %ld, %ld", this->Internals->N0, this->Internals->N1);
     svtkDataArray *da = dobj->GetAttributesAsFieldData(0)->GetArray("data");
 
     da->Print(std::cout);
@@ -221,7 +228,7 @@ bool Fft::Execute(sensei::DataAdaptor* dataIn, sensei::DataAdaptor** dataOut)
         printf("\n");
     }
 
-    std::vector<double> fftw_data = fftw(this->Internals->N0, this->Internals->N1, 0, this->Internals->data);
+    std::vector<double> fftw_data = fftw(this->Internals->N0, this->Internals->N1, this->Internals->direction, this->Internals->data);
 
     // DEBUG:
     printf("\n=> ALL fftw DATA === [%ld x %ld]\n", this->Internals->N0, this->Internals->N1);

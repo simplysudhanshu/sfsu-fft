@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib64/libsvtkCommonSystem-9.0.a CMakeFiles/CommonSystem.dir/svtkClientSocket.cxx.o CMakeFiles/CommonSystem.dir/svtkDirectory.cxx.o CMakeFiles/CommonSystem.dir/svtkServerSocket.cxx.o CMakeFiles/CommonSystem.dir/svtkSocket.cxx.o CMakeFiles/CommonSystem.dir/svtkSocketCollection.cxx.o CMakeFiles/CommonSystem.dir/svtkThreadMessager.cxx.o CMakeFiles/CommonSystem.dir/svtkTimerLog.cxx.o
-/usr/bin/ranlib ../../lib64/libsvtkCommonSystem-9.0.a
