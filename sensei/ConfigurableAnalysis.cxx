@@ -215,7 +215,7 @@ int ConfigurableAnalysis::InternalsType::AddHistogram(pugi::xml_node node)
 // --------------------------------------------------------------------------
 int ConfigurableAnalysis::InternalsType::AddFft(pugi::xml_node node)
 {
-  if (XMLUtils::RequireAttribute(node, "mesh") || XMLUtils::RequireAttribute(node, "direction"))
+  if (XMLUtils::RequireAttribute(node, "mesh") || XMLUtils::RequireAttribute(node, "direction") || XMLUtils::RequireAttribute(node, "python_xml"))
     {
     SENSEI_ERROR("Failed to initialize Fft");
     return -1;
@@ -223,30 +223,22 @@ int ConfigurableAnalysis::InternalsType::AddFft(pugi::xml_node node)
 
   std::string mesh = node.attribute("mesh").value();
   std::string direction = node.attribute("direction").value();
+  std::string python_xml = node.attribute("python_xml").value();
   
+  // check for valid direction:
   if (direction != "FFTW_FORWARD" && direction != "FFTW_BACKWARD")
   {
     SENSEI_ERROR("Invalid direction specified in XML (" + direction + "). Acceptable options are 'FFTW_FORWARD' or 'FFTW_BACKWARD'.")
     return -1;
   }
-//   int bins = node.attribute("bins").as_int(10);
-//   std::string fileName = node.attribute("file").value();
 
+  // Create FFT analysis adaptor and initialize with direction
   auto fft = svtkSmartPointer<Fft>::New();
+  fft->Initialize(direction, python_xml);
 
-  fft->Initialize(direction);
-
-//   if (this->Comm != MPI_COMM_NULL)
-//     fft->SetCommunicator(this->Comm);
-
-//   this->TimeInitialization(fft, [&]() {
-//       fft->Initialize(bins, mesh, association, array, fileName);
-//       return 0;
-//     });
   this->Analyses.push_back(fft.GetPointer());
 
   SENSEI_STATUS("Configured Fft.")
-
   return 0;
 } 
 

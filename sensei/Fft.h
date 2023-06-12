@@ -17,7 +17,7 @@ public:
 
   senseiTypeMacro(Fft, AnalysisAdaptor);
 
-  void Initialize(std::string const& direction);
+  void Initialize(std::string const& direction, std::string const& python_xml);
 
   /// compute the Fft for this time step
   bool Execute(DataAdaptor* data, DataAdaptor**) override;
