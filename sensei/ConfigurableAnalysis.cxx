@@ -222,6 +222,7 @@ int ConfigurableAnalysis::InternalsType::AddFft(pugi::xml_node node)
     }
 
   std::string mesh = node.attribute("mesh").value();
+  std::string array = node.attribute("array").value();
   std::string direction = node.attribute("direction").value();
   std::string python_xml = node.attribute("python_xml").value();
   
@@ -234,7 +235,7 @@ int ConfigurableAnalysis::InternalsType::AddFft(pugi::xml_node node)
 
   // Create FFT analysis adaptor and initialize with direction
   auto fft = svtkSmartPointer<Fft>::New();
-  fft->Initialize(direction, python_xml);
+  fft->Initialize(direction, python_xml, mesh, array);
 
   this->Analyses.push_back(fft.GetPointer());
 

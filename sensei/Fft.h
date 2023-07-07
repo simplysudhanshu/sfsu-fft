@@ -17,7 +17,7 @@ public:
 
   senseiTypeMacro(Fft, AnalysisAdaptor);
 
-  void Initialize(std::string const& direction, std::string const& python_xml);
+  void Initialize(std::string const& direction, std::string const& python_xml, std::string const& mesh_name, std::string const& array_name);
 
   /// compute the Fft for this time step
   bool Execute(DataAdaptor* data, DataAdaptor**) override;
@@ -39,6 +39,8 @@ protected:
   
   struct InternalsType;
   InternalsType *Internals;
+
+  svtkDataArray* GetArray(svtkDataObject* dobj, const std::string& arrayname);
 
 };
 

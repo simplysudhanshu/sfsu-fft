@@ -28,24 +28,27 @@ Sudhanshu Kulkarni, E. Wes Bethel
 #include <chrono>
 #include <string>
 #include <set>
+#include <memory>
 
 // #include <where-mpi.h>
+#include <svtkDataArray.h>
+#include <svtkFieldData.h>
+#include <svtkDataObject.h>
+#include <svtkMultiBlockDataSet.h>
+#include <svtkSmartPointer.h>
+
 #include <svtkDoubleArray.h>
 #include <svtkImageData.h>
-#include <svtkImageData.h>
 #include <svtkPointData.h>
-#include "SVTKDataAdaptor.h"
 
 //#include <fftw3.h>
-// #include <fftw3-mpi.h>
+//#include <fftw3-mpi.h>
 
 #include "ConfigurableAnalysis.h"
-#include "DataAdaptor.h"
-// #include "FftEndpoint.h"
 #include "MeshMetadata.h"
 #include "AnalysisAdaptor.h"
-#include <memory>
-#include <svtkSmartPointer.h>
+#include "SVTKDataAdaptor.h"
+#include "Error.h"
 
 
 using namespace std;
@@ -96,44 +99,63 @@ send_with_sensei(vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, string co
     sensei::ConfigurableAnalysis *fft_endpoint = sensei::ConfigurableAnalysis::New();
     fft_endpoint->Initialize(xmlFileName);
 
-    // Add data in SVTK
+    // Setting up double array
+    unsigned int nVals = data.size();
+    
     svtkDoubleArray *da = svtkDoubleArray::New();
-    da->SetNumberOfTuples(data.size());
-    da->SetName("data");
-
-    for (unsigned int i = 0; i < data.size(); ++i)
-        *da->GetPointer(i) = data.at(i);
+    da->SetNumberOfTuples(nVals);
+    da->SetName("dataArray");
+    for (unsigned int i = 0; i < nVals; ++i)
+        *da->GetPointer(i) = data[i];
 
     // DEBUG:
-    printf("\n-> Data_Generator :: Created svtkDataArray");
+    printf("\n-> testFFT :: Created svtkDoubleArray");
 
-    // Packing in svtkImageData
+    // Setting up Image Data
     svtkImageData *im = svtkImageData::New();
     im->SetDimensions(xDim, yDim, 1);
     im->GetPointData()->AddArray(da);
-    
     da->Delete();
-    
-    // DEBUG:
-    printf("\n-> Data_Generator :: Setting up data in svtkImageData");
 
-    // Setting up DataAdaptor
+    // DEBUG:
+    printf("\n-> testFFT :: Setting up data in svtkImageData");
+
+    // --
+    int dims[3];
+    im->GetDimensions(dims);	
+    printf("\n-> testFFT :: dimensions internal: %d, %d, %d", dims[0], dims[1], dims[2]);
+    // --
+
+    // Setting up MultiBlockDataSet    
+    svtkMultiBlockDataSet* mb = svtkMultiBlockDataSet::New();
+    mb->SetNumberOfBlocks(1);
+    mb->SetBlock(0, im);
+
+    // DEBUG:
+    printf("\n-> testFFT :: Setting up data in svtkMultiBlockDataSet");
+
     sensei::SVTKDataAdaptor *dataAdaptor = sensei::SVTKDataAdaptor::New();
-    dataAdaptor->SetDataObject("simulation_data", im); 
+    dataAdaptor->SetDataObject("mesh", mb);
+
+    im->Delete();
+    mb->Delete();
 
     // DEBUG:
-    printf("\n-> Data_Generator :: Setting up data in svtkDataAdaptor");
+    printf("\n-> testFFT :: Setting up data in svtkDataAdaptor");
 
     // Executing FFT via configurable analysis
     fft_endpoint->Execute(dataAdaptor, nullptr);
 }
+
 
 int 
 main(int argc, char *argv[])
 {
     // Initializing some required variables
     if (argc != 6){
-        printf("Exactly 4 arguments required: 'y_dim, x_dim, w, t, xml_file_path' and in the same order.");
+        printf("Exactly 5 arguments required: 'y_dim, x_dim, w, t, xml_file_path' and in the same order.\n");
+        printf("y_dim: Y-dimension of the data\nx_dim: X-dimension of the data\nw = change the original value by what percentage? (0-100)\n");
+        printf("t: what percentage of total values to change? (0-100)\nxml_file_path: XML file for FFT analysis endpoint.");
         exit(0);
     }
 
@@ -162,7 +184,7 @@ main(int argc, char *argv[])
     int max_working_ranks = nranks - (max_local_n0*nranks - N0);
 
     if (myrank == 0){
-        printf(":: DATA GENERATION ::\n-> %d x %d domain with %d%% noise over %d%% data points with %d way parallel execution.\n\n", N0, N1, w, t, nranks);
+        printf(":: test_FFT ::\n-> %d x %d domain with %d%% noise over %d%% data points with %d way parallel execution.\n\n", N0, N1, w, t, nranks);
 
         local_n0_start = 0;
         local_n0 = max_local_n0;
@@ -347,13 +369,12 @@ main(int argc, char *argv[])
         /* final Time Measurements */
         end_time = chrono::high_resolution_clock::now();
         elapsed_computation_time = end_time - start_time;
+        long elapsed_time_int = elapsed_computation_time.count();
 
         printf("\n ____ TIMING RESULTS ____");
-        printf("\nElapsed Computation Time: %6.4f (ms)\n", elapsed_computation_time*1000.0);
+        printf("\nElapsed Computation Time: %6.4ld (ms)\n", elapsed_time_int);
 
-
-        // MAKE SURE TO CREATE A FFT_XML FILE IN '/build/bin'.
-        string str = "fft_test.xml";
+        // Invoke FFT:
         send_with_sensei(all_pure_data, N0, N1, xml_file_path);
 
         // /* Writing output in data folder */
@@ -399,5 +420,4 @@ main(int argc, char *argv[])
     }
     MPI_Finalize();
     return 0;
-
 }

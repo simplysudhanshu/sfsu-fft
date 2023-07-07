@@ -3,6 +3,7 @@
 #include "ConfigurableAnalysis.h"
 #include "MeshMetadata.h"
 #include "MeshMetadataMap.h"
+#include "SVTKUtils.h"
 
 #include <iostream>
 #include <vector>
@@ -19,7 +20,11 @@
 #include <svtkImageData.h>
 #include <svtkPointData.h>
 #include <svtkFieldData.h>
-#include "SVTKDataAdaptor.h"
+#include <SVTKDataAdaptor.h>
+#include <svtkSmartPointer.h>
+#include <svtkCompositeDataIterator.h>
+#include <svtkCompositeDataSet.h>
+#include <svtkDataObject.h>
 
 #include <typeinfo>
 
@@ -27,14 +32,14 @@
 static void
 send_with_sensei(std::vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, std::string const& xmlFileName)
 {
+    // initialize xml
     auto aa = sensei::ConfigurableAnalysis::New();
-    
-    // MAKE SURE YOU HAVE THIS XML FILE IN /build/bin FOLDER
     aa->Initialize(xmlFileName);     
     
     // DEBUG:
     printf("\n-> FFT to Python :: SENSEI initialization complete");
 
+    // Setting up double array
     svtkDoubleArray *da = svtkDoubleArray::New();
     da->SetNumberOfTuples(data.size());
     da->SetName("data");
@@ -42,6 +47,7 @@ send_with_sensei(std::vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, std:
 
     for (unsigned int i = 0; i < data.size(); ++i)
         *da->GetPointer(i) = data.at(i);
+    da->Delete();
     
     // DEBUG:
     printf("\n-> FFT to Python :: Setting up data in svtkDataArray");
@@ -49,16 +55,14 @@ send_with_sensei(std::vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, std:
     svtkImageData *im = svtkImageData::New(); 
     im->SetDimensions(xDim, yDim, 0);
     im->GetPointData()->AddArray(da);
-    da->Delete();
 
     // DEBUG:
     printf("\n-> FFT to Python :: Setting up data in svtkImageData");
 
     sensei::SVTKDataAdaptor *dataAdaptor = sensei::SVTKDataAdaptor::New();
-    // auto* dataAdaptor = sensei::DataAdaptor::New();
-    // dataAdaptor->AddArray(im, "data", 0, "random std::string");
     dataAdaptor->SetDataObject("data", im); 
-    // im->Delete();
+    
+    im->Delete();
 
     // DEBUG:
     printf("\n-> FFT to Python :: Setting up data in svtkDataAdaptor");
@@ -125,7 +129,6 @@ fftw(ptrdiff_t N0, ptrdiff_t N1, std::string direction, std::vector<double> inpu
 
     std::vector<double> sbuf;
     sbuf.reserve(local_n0*N1 + 2);
-    // fill(sbuf.begin(), sbuf.end(), -1.0);
 
     // Appending local_n0 and local_n0_start to sbuf, to calculate global offet of this particular data
     sbuf.emplace_back(local_n0_start);
@@ -149,13 +152,15 @@ namespace sensei
 {
 struct Fft::InternalsType
 {
-  InternalsType() : N0(0), N1(0), direction("FFTW_FORWARD"), python_xml("") {}
+  InternalsType() : N0(12), N1(12), direction("FFTW_FORWARD"), python_xml(""), mesh_name(""), array_name("") {}
   ~InternalsType() {}
 
   ptrdiff_t N0, N1;
   std::string direction;
   std::vector <double> data;
   std::string python_xml;
+  std::string mesh_name;
+  std::string array_name;
 
 };
 
@@ -174,70 +179,98 @@ Fft::~Fft()
 }
 
 //----------------------------------------------------------------------------
-void Fft::Initialize(std::string const& direction, std::string const& python_xml){
+void Fft::Initialize(std::string const& direction, std::string const& python_xml, std::string const& mesh_name, std::string const& array_name){
     this->Internals->direction = direction;
     this->Internals->python_xml = python_xml;
+    this->Internals->mesh_name = mesh_name;
+    this->Internals->array_name = array_name;
 }
 
 //----------------------------------------------------------------------------
 bool Fft::Execute(sensei::DataAdaptor* dataIn, sensei::DataAdaptor** dataOut)
 {
-  printf("\n-> FFT :: In FFTW Endpoint\n");
+  printf("\n\n:: FFT ENDPOINT ::\n");
 
-  // we do not return anything
+  // we do not return anything yet
   if (dataOut)
     {
       *dataOut = nullptr;
     }
     
+    // see what the simulation is providing
+    MeshMetadataMap mdMap;
+    if (mdMap.Initialize(dataIn)){
+        SENSEI_ERROR("Failed to get metadata")
+        return false;
+    }
+
+    // get the mesh metadata object
+    MeshMetadataPtr mmd;
+    if (mdMap.GetMeshMetadata(this->Internals->mesh_name, mmd)){
+        SENSEI_ERROR("Failed to get metadata for mesh \"" << this->Internals->mesh_name << "\"")
+        return false;
+    }
+
     // get the mesh object
     svtkDataObject *dobj = nullptr;
 
-    if (dataIn->GetMesh("simulation_data", true, dobj))
-        {
-        SENSEI_ERROR("Failed to get mesh: \t simulation_data" << "\"")
+    if (dataIn->GetMesh(this->Internals->mesh_name, false, dobj)){
+        SENSEI_ERROR("Failed to get mesh: \t " + this->Internals->mesh_name << "\"")
         return false;
     }
-    svtkImageData* im = dynamic_cast<svtkImageData*>(dobj);
-    cout << "Type of im: " << typeid(im).name() << "\n";
+
+     // fetch the array that the hiostogram will be computed on
+    if (dataIn->AddArray(dobj, this->Internals->mesh_name, svtkDataObject::POINT, this->Internals->array_name)){
+        SENSEI_ERROR(<< dataIn->GetClassName() << " failed to add point"
+        << " data array \""  <<  this->Internals->array_name << "\"")
+
+        return false;
+    }
+
+    // convert to multiblock and process the blocks
+    svtkCompositeDataSetPtr mesh = SVTKUtils::AsCompositeData(Comm, dobj, true);
+    svtkSmartPointer<svtkCompositeDataIterator> iter;
+    iter.TakeReference(mesh->NewIterator());
     
-    // DEBUGGING DIFFERENT METHODS TO GetDimensions:
-    printf("\n-> FFT :: Debug Point 1\n");
+    for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
+    {   
+        // get the block
+        svtkDataObject *curObj = iter->GetCurrentDataObject();
+        
+        // Get Data
+        svtkDataArray* da = this->GetArray(curObj, this->Internals->array_name);
+        if (!da)
+        {
+            SENSEI_WARNING("Data block " << iter->GetCurrentFlatIndex()
+                << " of mesh \"" << this->Internals->mesh_name  << "\" has no array named \""
+                << this->Internals->array_name << "\"")
+            continue;
+        }
 
-    int dimensions[3];
-    int* dimP = dimensions;
+        // Check if the input data object is actually an image data
+        svtkImageData* imageData = svtkImageData::SafeDownCast(curObj);
+        if (imageData){
+            int dims[3];
+            imageData->GetDimensions(dims);	
 
-    cout << "dimP: " << dimP << '\n' << "Type of dimP: " << typeid(dimP).name() << '\n';
+            this->Internals->N0 = dims[0];
+            this->Internals->N1 = dims[1];
+            printf("\n-> FFT :: dimensions internal: %d, %d, %d\n", dims[0], dims[1], dims[2]);
+        }
+        else{
+            SENSEI_WARNING("Image Data has no dimensions.");
+            continue;
+        }
+        
+        // DEBUG:
+        printf("\n-> FFT :: dimensions : %ld, %ld\n", this->Internals->N0, this->Internals->N1);
+
+        // Copy data into Internals
+        for (int i = 0; i < (this->Internals->N0 * this->Internals->N1); ++i){
+            this->Internals->data.push_back(*da->GetTuple(i));
+        }  
+    }
     
-    im->GetDimensions(dimP);          
-    cout << "DIMP: " << dimP[0] << "-" << dimP[1] << "-" << dimP[2] << "\n";
-
-    // ---
-
-    svtkIdType dimsID[3];
-    im->GetDimensions(dimsID);
-    cout << "DIMSID: " << dimsID[0] << "-" << dimsID[1] << "-" << dimsID[2] << "\n";
-    
-    // ---
-
-    const int* dims = im->GetDimensions();
-    cout << "DIMS: " << dims[0] << "-" << dims[1] << "-" << dims[2] << "\n";
-
-
-    // Setup dimensions of data to compute FFT from
-    this->Internals->N0 = (long int)(dims[0]);
-    this->Internals->N1 = (long int)(dims[1]);
-
-    // DEBUG:
-    printf("\n-> FFT :: dimensions: %ld, %ld", this->Internals->N0, this->Internals->N1);
-    
-    // Get Data
-    svtkDataArray *da = dobj->GetAttributesAsFieldData(0)->GetArray("data");
-
-    for (int i = 0; i < (this->Internals->N0 * this->Internals->N1); ++i){
-        this->Internals->data.emplace_back(*da->GetTuple(i));
-    } 
-
     // DEBUG:
     printf("\n-> FFT :: ALL input DATA === [%ld x %ld]\n", this->Internals->N0, this->Internals->N1);
     for (ptrdiff_t y = 0; y < this->Internals->N0; ++y) {
@@ -266,6 +299,15 @@ bool Fft::Execute(sensei::DataAdaptor* dataIn, sensei::DataAdaptor** dataOut)
 }
 
 //-----------------------------------------------------------------------------
+svtkDataArray* Fft::GetArray(svtkDataObject* dobj, const std::string& arrayname)
+{
+    if (svtkFieldData* fd = dobj->GetAttributesAsFieldData(0)){
+        return fd->GetArray(arrayname.c_str());
+    }
+    return nullptr;
+}
+
+//-----------------------------------------------------------------------------
 int Fft::Finalize()
 {
   return 0;
@@ -275,6 +317,5 @@ int Fft::Finalize()
 Fft* Fft::New(){
     return new sensei::Fft();
 }
-
 
 }
