@@ -109,7 +109,7 @@ send_with_sensei(vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, string co
         *da->GetPointer(i) = data[i];
 
     // DEBUG:
-    printf("\n-> testFFT :: Created svtkDoubleArray");
+    printf("\n-> testFFT :: Setting up data in svtkDoubleArray");
 
     // Setting up Image Data
     svtkImageData *im = svtkImageData::New();
@@ -119,12 +119,6 @@ send_with_sensei(vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, string co
 
     // DEBUG:
     printf("\n-> testFFT :: Setting up data in svtkImageData");
-
-    // --
-    int dims[3];
-    im->GetDimensions(dims);	
-    printf("\n-> testFFT :: dimensions internal: %d, %d, %d", dims[0], dims[1], dims[2]);
-    // --
 
     // Setting up MultiBlockDataSet    
     svtkMultiBlockDataSet* mb = svtkMultiBlockDataSet::New();

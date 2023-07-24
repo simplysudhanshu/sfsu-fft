@@ -23,6 +23,7 @@
 #include <SVTKDataAdaptor.h>
 #include <svtkSmartPointer.h>
 #include <svtkCompositeDataIterator.h>
+#include <svtkMultiBlockDataSet.h>
 #include <svtkCompositeDataSet.h>
 #include <svtkDataObject.h>
 
@@ -33,34 +34,31 @@ static void
 send_with_sensei(std::vector <double> data, ptrdiff_t xDim, ptrdiff_t yDim, std::string const& xmlFileName)
 {
     // initialize xml
-    auto aa = sensei::ConfigurableAnalysis::New();
+    sensei::ConfigurableAnalysis *aa = sensei::ConfigurableAnalysis::New();
     aa->Initialize(xmlFileName);     
     
-    // DEBUG:
-    printf("\n-> FFT to Python :: SENSEI initialization complete");
-
     // Setting up double array
     svtkDoubleArray *da = svtkDoubleArray::New();
-    da->SetNumberOfTuples(data.size());
-    da->SetName("data");
-    printf("\n-> Created svtkDataArray\n");
+    unsigned int nVals = data.size();
 
-    for (unsigned int i = 0; i < data.size(); ++i)
+    da->SetNumberOfTuples(nVals);
+    da->SetName("data");
+    for (unsigned int i = 0; i < nVals; ++i)
         *da->GetPointer(i) = data.at(i);
-    da->Delete();
     
     // DEBUG:
-    printf("\n-> FFT to Python :: Setting up data in svtkDataArray");
+    printf("\n-> FFT to Python :: Setting up data in svtkDoubleArray");
 
     svtkImageData *im = svtkImageData::New(); 
-    im->SetDimensions(xDim, yDim, 0);
+    im->SetDimensions(xDim, yDim, 1);
     im->GetPointData()->AddArray(da);
-
+    da->Delete();
+    
     // DEBUG:
     printf("\n-> FFT to Python :: Setting up data in svtkImageData");
 
     sensei::SVTKDataAdaptor *dataAdaptor = sensei::SVTKDataAdaptor::New();
-    dataAdaptor->SetDataObject("data", im); 
+    dataAdaptor->SetDataObject("mesh", im); 
     
     im->Delete();
 
@@ -255,7 +253,6 @@ bool Fft::Execute(sensei::DataAdaptor* dataIn, sensei::DataAdaptor** dataOut)
 
             this->Internals->N0 = dims[0];
             this->Internals->N1 = dims[1];
-            printf("\n-> FFT :: dimensions internal: %d, %d, %d\n", dims[0], dims[1], dims[2]);
         }
         else{
             SENSEI_WARNING("Image Data has no dimensions.");
